@@ -103,14 +103,14 @@ var attendance = {
         /*
         Set a student's attendance array of booleans in localstorage
         */
-        // get copy of the students data
+        // get copy of the students data table
         var students = model.get.students();
         // reset a specific student's attendance = to the passed in array
         students[name] = attendance_array;
-        // recodify the students table into string and push back to localstorage
+        // recodify the students table to string, update the localstorage
         localStorage.attendance = JSON.stringify(students);
         // recalculate missed days for updated student item
-        model.state[name] = calculate_missed_days(attendance_array);
+        model.state[name] = model.calculate_missed_days(attendance_array);
       }
     }
   };
@@ -119,37 +119,30 @@ var attendance = {
     init: function() {
       model.init();
       view.init();
+      // attach event listeners to whatever needs it
+      this.attach_listeners();
     },
     attach_listeners: function() {
-      // event listener, When a checkbox is clicked, update localStorage
-      view.elements.$checkboxes.on('click', function() {
-          // get each of the  student table rows
-          var studentRows = $('tbody .student'),
-          // init an object for the new attendance records
-              newAttendance = {};
+      // attach listener to the body to listen for checkbox events bubbling up
+      $(view.elements.$tbody).on('click', '.attend-col', function() {
+        // array to update w/ new attendance properties in the interacted row
+        var updated_attendance_array = [];
+        // grab current row's student name
+        var current_student = $(this).siblings('.name-col').text();
+        // grab all checkbox inputs in the row that was clicked on
+        var $current_row = $(this).parents('.student').find('input');
 
-          // loop through each student's row in the table
-          studentRows.each(function() {
-              // grab the name text of the current student row in the loop
-              var name = $(this).children('.name-col').text(),
-              // grab all the checkbox inputs for this row
-                  $allCheckboxes = $(this).children('td').children('input');
+        // loop through the current row of checkbox inputs
+        for (i=0; i < $current_row.length; i+=1) {
+          // push the updated checkbox inputs to the attedance array
+          updated_attendance_array.push($($current_row[i]).prop('checked'));
+        }
 
-              // push an array named w/ student name to the newAttendance object
-              // array will store the new boolean values for each input checkbox
-              newAttendance[name] = [];
+        // update the student's data w/ the new attendance array
+        model.set.student(current_student, updated_attendance_array);
+        // rerender the missing days view
+        view.render.missing(current_student, model.get.missed_days(current_student));
 
-              // loop through all the checkbox inputs
-              $allCheckboxes.each(function() {
-                  // push boolean value of checked property to the array for a student
-                  newAttendance[name].push($(this).prop('checked'));
-              });
-          });
-
-          // count missing days now that its been updated and display it
-          //countMissing();
-          // update the data with the new attendance data
-          localStorage.attendance = JSON.stringify(newAttendance);
       });
     }
   };
@@ -159,10 +152,10 @@ var attendance = {
       // get the dom elements from the live dom
       this.grab_elements();
 
-      var name;
       // grab the full students table data
       var students = model.get.students();
       // loop through each student in the table
+      var name;
       for (name in students) {
         // check checkboxes that should be checked based on initial data in each
         // student attendance array record
@@ -171,18 +164,20 @@ var attendance = {
         this.render.missing(name, model.get.missed_days(name));
       }
 
-
     },
     elements: {
       // will have values assigned w/ relevant dom elements
       $missed: undefined,
       $checkboxes: undefined,
+      $tbody: undefined
     },
     grab_elements: function() {
       // cache ref to the col that lists missed days
       this.elements.$missed = $('tbody .missed-col');
       // gets all the checkbox elements in the dom
       this.elements.$checkboxes = $('tbody input');
+      // get the tbody container elements
+      this.elements.$tbody = $('tbody');
     },
     render: {
       missing: function(name, missing_days) {
@@ -214,90 +209,7 @@ var attendance = {
     }
   };
 
+  // initiate the app
   controller.init();
 
 }($));
-
-/* STUDENT APPLICATION */
-// $(function() {
-//     // grabs the attendance data from local storage
-//     var attendance = JSON.parse(localStorage.attendance),
-//         // cache ref to the col that lists missed days
-//         $allMissed = $('tbody .missed-col'),
-//         // gets all the checkbox elements in the dom
-//         $allCheckboxes = $('tbody input');
-//
-//     // Count a student's missed days
-//     function countMissing() {
-//         // loops through each missed days row
-//         $allMissed.each(function() {
-//             // get the current table row element
-//             var studentRow = $(this).parent('tr'),
-//             // get all the checkbox input elements in the current row
-//                 dayChecks = $(studentRow).children('td').children('input'),
-//             // start days missed at 0
-//                 numMissed = 0;
-//
-//             // loop through all the checkboxes in the current row
-//             dayChecks.each(function() {
-//                 // check if current checkbox is not checked
-//                 if (!$(this).prop('checked')) {
-//                     // if not checked, increment the number missed counter
-//                     numMissed++;
-//                 }
-//             });
-//
-//             // show the number of days missed in the current missed-col td
-//             $(this).text(numMissed);
-//         });
-//     }
-//
-//     // Add checked property to Check boxes, based on attendance records
-//     $.each(attendance, function(name, days) {
-//         // grab the row by the student name set in the name-col
-//         var studentRow = $('tbody .name-col:contains("' + name + '")').parent('tr'),
-//         // grab all the checkboxes for the current student row
-//             dayChecks = $(studentRow).children('.attend-col').children('input');
-//
-//         // loop through all the check boxes in the current row
-//         dayChecks.each(function(i) {
-//             // set the checked property based on index of that checkbox vs the
-//             // corresponding item in the days array being true or false
-//            $(this).prop('checked', days[i]);
-//         });
-//     });
-//
-//     // event listener, When a checkbox is clicked, update localStorage
-//     $allCheckboxes.on('click', function() {
-//         // get each of the  student table rows
-//         var studentRows = $('tbody .student'),
-//         // init an object for the new attendance records
-//             newAttendance = {};
-//
-//         // loop through each student's row in the table
-//         studentRows.each(function() {
-//             // grab the name text of the current student row in the loop
-//             var name = $(this).children('.name-col').text(),
-//             // grab all the checkbox inputs for this row
-//                 $allCheckboxes = $(this).children('td').children('input');
-//
-//             // push an array named w/ student name to the newAttendance object
-//             // array will store the new boolean values for each input checkbox
-//             newAttendance[name] = [];
-//
-//             // loop through all the checkbox inputs
-//             $allCheckboxes.each(function() {
-//                 // push boolean value of checked property to the array for a student
-//                 newAttendance[name].push($(this).prop('checked'));
-//             });
-//         });
-//
-//         // count missing days now that its been updated and display it
-//         countMissing();
-//         // update the data with the new attendance data
-//         localStorage.attendance = JSON.stringify(newAttendance);
-//     });
-//
-//     // display the starting number of missing days for each student
-//     countMissing();
-// }());
